@@ -1,6 +1,6 @@
 # Tinyer
 
-A simple URL shortner built with Go.
+A simple URL shortner service built with Go.
 
 **Installing**
 
