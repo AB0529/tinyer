@@ -45,7 +45,7 @@ Responses definations will only show the value of the `result field`*.
 {
     "slug": "cool-site",
     "name": "Cool Site",
-    "url": "https://anishb.net",
+    "url": "https://google.com",
     "created-at": "2009-11-10 23:00:00 +0000 UTC m=+0.000000000"
 }
 ```
@@ -76,7 +76,7 @@ Responses definations will only show the value of the `result field`*.
 {
     "slug": "created-site",
     "name": "Created Site",
-    "url": "https://anishb.net",
+    "url": "https://google.com",
     "created-at": "2009-11-10 23:00:00 +0000 UTC m=+0.000000000"
 }
 ```
@@ -105,7 +105,7 @@ Responses definations will only show the value of the `result field`*.
 {
     "slug": "deleted-site",
     "name": "Deleted Site",
-    "url": "https://anishb.net",
+    "url": "https://google.com",
     "created-at": "2009-11-10 23:00:00 +0000 UTC m=+0.000000000"
 }
 ```
