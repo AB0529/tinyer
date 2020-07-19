@@ -2,6 +2,15 @@
 
 A simple URL shortner built with Go.
 
+**Installing**
+
+Go installation guide can be found (here)[https://golang.org/doc/install]
+
+```sh
+# Install project dependencies
+go get -u ./...
+```
+
 **Running**
 
 ```sh
