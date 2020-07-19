@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -71,9 +73,52 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 	} else {
 		slug = bod.Slug
 	}
+
+	// Check database for duplicate slugs
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cur, err := db.Find(ctx, bson.M{"slug": slug})
+	if err != nil {
+		fmt.Println("error (78): " + err.Error())
+	}
+	defer cur.Close(ctx)
+	for cur.Next(ctx) {
+		var res bson.M
+		err := cur.Decode(&res)
+
+		if err != nil {
+			fmt.Println("error (86): " + err.Error())
+		}
+
+		if res["slug"] == slug {
+			SendJSON(w, Response{Status: http.StatusConflict, State: "fail", Result: fmt.Sprintf("slug with identifier '%s' already exists", slug)})
+			return
+		}
+
+	}
+	if err := cur.Err(); err != nil {
+		panic(err)
+	}
+
 	timestamp := time.Now().String()
 
-	SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: Tinyer{Slug: slug, Name: bod.Name, CreatedAt: timestamp}})
+	// Create url in database
+	res, err := db.InsertOne(ctx, bson.M{
+		"slug":       slug,
+		"name":       bod.Name,
+		"created-at": timestamp,
+	})
+
+	if err != nil {
+		// Handle duplicate error
+		if strings.IndexAny(err.Error(), "E11000 duplicate key error collection") != -1 {
+			SendJSON(w, Response{Status: http.StatusConflict, State: "fail", Result: fmt.Sprintf("slug with identifier '%s' already exists", slug)})
+			return
+		}
+		panic(err)
+	}
+
+	SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
 }
 
 // SendJSON util func to handle sending JSON response
