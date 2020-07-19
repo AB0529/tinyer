@@ -134,7 +134,7 @@ func DeleteURL(w http.ResponseWriter, r *http.Request) {
 	}
 	defer cur.Close(ctx)
 
-	// Could not find
+	// Could not find item
 	if cur.RemainingBatchLength() <= 0 {
 		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' could not be found", id)})
 		return
