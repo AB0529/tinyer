@@ -24,12 +24,20 @@ Responses definations will only show the value of the `result field`*.
 
 **Response**
 - `200 OK` on success
+- `404 Not Found` if url could not be found
 
 ```json
 {
     "slug": "cool-site",
     "name": "Cool Site",
     "created-at": "2009-11-10 23:00:00 +0000 UTC m=+0.000000000"
+}
+```
+```json
+{
+    "status": 404,
+    "state": "fail",
+    "result": "error: url with identifer 'uncool-site' could not be found",
 }
 ```
 
@@ -74,7 +82,7 @@ Responses definations will only show the value of the `result field`*.
 **Response**
 
 - `200 OK` on success
-- `404 Not Found` if URL does not exist
+- `404 Not Found` if url does not exist
 
 ```json
 {

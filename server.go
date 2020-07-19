@@ -2,14 +2,29 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
+	"time"
+	"unsafe"
+
+	"github.com/gorilla/mux"
+	s "github.com/gosimple/slug"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Response the API response object
 type Response struct {
-	Status int
-	State  string
-	Result interface{}
+	Status int         `json:"status"`
+	State  string      `json:"state"`
+	Result interface{} `json:"result"`
+}
+
+// Tinyer the url that was tinyified
+type Tinyer struct {
+	Slug      string `json:"slug"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created-at"`
 }
 
 // Home serves the home html file
@@ -18,9 +33,47 @@ func Home(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusSeeOther)
 }
 
-// Ping test route to see if API is online
-func Ping(w http.ResponseWriter, r *http.Request) {
-	SendJSON(w, Response{Status: 200, State: "ok", Result: "Pong!"})
+// GetURL will return info about the URL
+func GetURL(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+
+	// Search Mongo with identifier
+	var res Tinyer
+	db.FindOne(ctx, bson.M{"slug": id}).Decode(&res)
+
+	if res == (Tinyer{}) {
+		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' does not exist", id)})
+	}
+}
+
+// CreateURL creates a new url and uploads to database
+func CreateURL(w http.ResponseWriter, r *http.Request) {
+	var bod Tinyer
+	var slug string
+
+	// Decode incomming request as JSON
+	err := json.NewDecoder(r.Body).Decode(&bod)
+
+	// Send 400 is error occurs
+	if err != nil {
+		SendJSON(w, Response{Status: http.StatusBadRequest, State: "fail", Result: "error: invalid input"})
+		return
+	}
+	// Make sure name is provided
+	if bod.Name == "" {
+		SendJSON(w, Response{Status: http.StatusBadRequest, State: "fail", Result: "error: must provide a name"})
+		return
+	}
+
+	// If slug is not provided, generate random one
+	if bod.Slug == "" {
+		slug = CreateSlug(5)
+	} else {
+		slug = bod.Slug
+	}
+	timestamp := time.Now().String()
+
+	SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: Tinyer{Slug: slug, Name: bod.Name, CreatedAt: timestamp}})
 }
 
 // SendJSON util func to handle sending JSON response
@@ -37,4 +90,31 @@ func SendJSON(w http.ResponseWriter, resp Response) (bool, error) {
 	w.Write(json)
 
 	return true, nil
+}
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6
+	letterIdxMask = 1<<letterIdxBits - 1
+	letterIdxMax  = 63 / letterIdxBits
+)
+
+// CreateSlug will create a slug with random charas given the provided length
+func CreateSlug(n int) string {
+	b := make([]byte, n)
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return s.Make(*(*string)(unsafe.Pointer(&b)))
 }
