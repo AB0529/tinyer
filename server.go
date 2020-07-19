@@ -40,11 +40,41 @@ func GetURL(w http.ResponseWriter, r *http.Request) {
 	id := s.Make(mux.Vars(r)["id"])
 
 	// Search Mongo with identifier
-	var res Tinyer
-	db.FindOne(ctx, bson.M{"slug": id}).Decode(&res)
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cur, err := db.Find(ctx, bson.M{"slug": id})
+	if err != nil {
+		panic(err)
+	}
+	defer cur.Close(ctx)
 
-	if res == (Tinyer{}) {
+	// Item could not be found
+	if cur.RemainingBatchLength() <= 0 {
 		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' could not be found", id)})
+		return
+	}
+
+	for cur.Next(ctx) {
+		var res bson.M
+		err := cur.Decode(&res)
+
+		if err != nil {
+			panic(err)
+		}
+
+		if res["slug"] == id {
+			// Display result
+			SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
+			return
+		}
+
+	}
+	if err := cur.Err(); err != nil {
+		panic(err)
+	}
+
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -79,7 +109,7 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	cur, err := db.Find(ctx, bson.M{"slug": slug})
 	if err != nil {
-		fmt.Println("error (78): " + err.Error())
+		panic(err)
 	}
 	defer cur.Close(ctx)
 	for cur.Next(ctx) {
@@ -87,7 +117,7 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 		err := cur.Decode(&res)
 
 		if err != nil {
-			fmt.Println("error (86): " + err.Error())
+			panic(err)
 		}
 
 		if res["slug"] == slug {
@@ -130,7 +160,7 @@ func DeleteURL(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	cur, err := db.Find(ctx, bson.M{"slug": id})
 	if err != nil {
-		fmt.Println("error (78): " + err.Error())
+		panic(err)
 	}
 	defer cur.Close(ctx)
 
@@ -145,7 +175,7 @@ func DeleteURL(w http.ResponseWriter, r *http.Request) {
 		err := cur.Decode(&res)
 
 		if err != nil {
-			fmt.Println("error (86): " + err.Error())
+			panic(err)
 		}
 
 		if res["slug"] == id {
