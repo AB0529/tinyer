@@ -149,8 +149,6 @@ func DeleteURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(res)
-
 	// Delete url if found
 	if res["slug"] == id {
 		if _, err := db.DeleteOne(ctx, bson.M{"slug": id}); err != nil {
