@@ -27,6 +27,7 @@ type Response struct {
 type Tinyer struct {
 	Slug      string `json:"slug"`
 	Name      string `json:"name"`
+	URL       string `json:"url"`
 	CreatedAt string `json:"created-at"`
 }
 
@@ -34,6 +35,25 @@ type Tinyer struct {
 func Home(w http.ResponseWriter, r *http.Request) {
 	// TODO: Create better home page redirects for now
 	http.Redirect(w, r, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusSeeOther)
+}
+
+// Redirect will redirect user if valid id is provided
+func Redirect(w http.ResponseWriter, r *http.Request) {
+	id := s.Make(mux.Vars(r)["slug"])
+	// Validate identifier
+	res, cancel, _ := FindSlug(bson.M{"slug": id})
+	defer cancel()
+
+	if res == nil {
+		fmt.Fprint(w, "404 not found")
+		return
+	}
+
+	if res["slug"] == id {
+		// Redirect to url
+		http.Redirect(w, r, fmt.Sprintf("%v", res["url"]), http.StatusSeeOther)
+		return
+	}
 }
 
 // GetURL will return info about the URL
@@ -74,6 +94,11 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 		SendJSON(w, Response{Status: http.StatusBadRequest, State: "fail", Result: "error: must provide a name"})
 		return
 	}
+	// Make sure url is provided
+	if bod.URL == "" {
+		SendJSON(w, Response{Status: http.StatusBadRequest, State: "fail", Result: "error: must provide a url"})
+		return
+	}
 
 	// If slug is not provided, generate random one
 	if bod.Slug == "" {
@@ -96,6 +121,7 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 	_, err = db.InsertOne(ctx, bson.M{
 		"slug":       slug,
 		"name":       bod.Name,
+		"url":        bod.URL,
 		"created-at": timestamp,
 	})
 

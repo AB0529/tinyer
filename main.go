@@ -56,6 +56,7 @@ func main() {
 	router.HandleFunc("/urls/{id}", GetURL).Methods("GET")
 	router.HandleFunc("/urls", CreateURL).Methods("POST")
 	router.HandleFunc("/urls/{id}", DeleteURL).Methods("DELETE")
+	router.HandleFunc("/{slug}", Redirect)
 
 	// -------------------------------
 
