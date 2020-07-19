@@ -121,6 +121,14 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 	SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
 }
 
+// DeleteURL will delete a url
+func DeleteURL(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["delid"]
+
+	fmt.Println(r.Method)
+	fmt.Println(id)
+}
+
 // SendJSON util func to handle sending JSON response
 func SendJSON(w http.ResponseWriter, resp Response) (bool, error) {
 	// Decode JSON

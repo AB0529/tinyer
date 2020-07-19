@@ -45,7 +45,7 @@ Responses definations will only show the value of the `result field`*.
 
 **Definition**
 
-`POST /urls`
+`POST /urls/create`
 
 **Arguments**
 
@@ -77,7 +77,7 @@ Responses definations will only show the value of the `result field`*.
 
 **Definition**
 
-`DELETE /urls/{identifier}`
+`DELETE /urls/delete/{identifier}`
 
 **Response**
 

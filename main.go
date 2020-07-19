@@ -52,8 +52,9 @@ func main() {
 	// Routes
 	// -------------------------------
 	router.HandleFunc("/", Home)
-	router.HandleFunc("/urls/{id}", GetURL)
-	router.HandleFunc("/urls", CreateURL).Methods("POST")
+	router.HandleFunc("/urls/{id}", GetURL).Methods("GET")
+	router.HandleFunc("/urls/create", CreateURL).Methods("POST")
+	router.HandleFunc("/urls/delete/{delid}", CreateURL).Methods("DELETE")
 	// -------------------------------
 
 	// Run server
