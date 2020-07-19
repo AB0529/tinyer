@@ -2,6 +2,12 @@
 
 A simple URL shortner built with Go.
 
+**Running**
+
+```sh
+go run .\main.go .\server.go
+```
+
 ## Usage
 
 All responses will have the same form.
