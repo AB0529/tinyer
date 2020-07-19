@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -29,9 +30,6 @@ type Tinyer struct {
 	CreatedAt string `json:"created-at"`
 }
 
-// TODO: Duplicate code used on all 3 methods
-// Condense into function later
-
 // Home serves the home html file
 func Home(w http.ResponseWriter, r *http.Request) {
 	// TODO: Create better home page redirects for now
@@ -43,41 +41,18 @@ func GetURL(w http.ResponseWriter, r *http.Request) {
 	id := s.Make(mux.Vars(r)["id"])
 
 	// Search Mongo with identifier
-	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	res, cancel, _ := FindSlug(bson.M{"slug": id})
 	defer cancel()
-	cur, err := db.Find(ctx, bson.M{"slug": id})
-	if err != nil {
-		panic(err)
-	}
-	defer cur.Close(ctx)
 
-	// Item could not be found
-	if cur.RemainingBatchLength() <= 0 {
+	if res == nil {
 		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' could not be found", id)})
 		return
 	}
 
-	for cur.Next(ctx) {
-		var res bson.M
-		err := cur.Decode(&res)
-
-		if err != nil {
-			panic(err)
-		}
-
-		if res["slug"] == id {
-			// Display result
-			SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
-			return
-		}
-
-	}
-	if err := cur.Err(); err != nil {
-		panic(err)
-	}
-
-	if err != nil {
-		panic(err)
+	if res["slug"] == id {
+		// Display result
+		SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
+		return
 	}
 }
 
@@ -107,35 +82,17 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 		slug = bod.Slug
 	}
 
-	// Check database for duplicate slugs
-	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	// Find duplicate
+	res, cancel, _ := FindSlug(bson.M{"slug": slug})
 	defer cancel()
-	cur, err := db.Find(ctx, bson.M{"slug": slug})
-	if err != nil {
-		panic(err)
+
+	if res["slug"] == slug {
+		SendJSON(w, Response{Status: http.StatusConflict, State: "fail", Result: fmt.Sprintf("slug with identifier '%s' already exists", slug)})
+		return
 	}
-	defer cur.Close(ctx)
-	for cur.Next(ctx) {
-		var res bson.M
-		err := cur.Decode(&res)
-
-		if err != nil {
-			panic(err)
-		}
-
-		if res["slug"] == slug {
-			SendJSON(w, Response{Status: http.StatusConflict, State: "fail", Result: fmt.Sprintf("slug with identifier '%s' already exists", slug)})
-			return
-		}
-
-	}
-	if err := cur.Err(); err != nil {
-		panic(err)
-	}
-
-	timestamp := time.Now().String()
 
 	// Create url in database
+	timestamp := time.Now().String()
 	_, err = db.InsertOne(ctx, bson.M{
 		"slug":       slug,
 		"name":       bod.Name,
@@ -157,45 +114,27 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 // DeleteURL will delete a url
 func DeleteURL(w http.ResponseWriter, r *http.Request) {
 	id := s.Make(mux.Vars(r)["id"])
-
-	// Check if url exists
-	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	res, cancel, _ := FindSlug(bson.M{"slug": id})
 	defer cancel()
-	cur, err := db.Find(ctx, bson.M{"slug": id})
-	if err != nil {
-		panic(err)
-	}
-	defer cur.Close(ctx)
 
-	// Item could not be found
-	if cur.RemainingBatchLength() <= 0 {
+	// No item found
+	if res == nil {
 		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' could not be found", id)})
 		return
 	}
 
-	for cur.Next(ctx) {
-		var res bson.M
-		err := cur.Decode(&res)
+	fmt.Println(res)
 
-		if err != nil {
+	// Delete url if found
+	if res["slug"] == id {
+		if _, err := db.DeleteOne(ctx, bson.M{"slug": id}); err != nil {
 			panic(err)
 		}
 
-		if res["slug"] == id {
-			// Delete if exists
-			db.DeleteOne(ctx, bson.M{"slug": id})
-			SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
-			return
-		}
-
-	}
-	if err := cur.Err(); err != nil {
-		panic(err)
+		SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
+		return
 	}
 
-	if err != nil {
-		panic(err)
-	}
 }
 
 // SendJSON util func to handle sending JSON response
@@ -239,4 +178,34 @@ func CreateSlug(n int) string {
 	}
 
 	return s.Make(*(*string)(unsafe.Pointer(&b)))
+}
+
+// FindSlug finds item in database with same slug as provided
+func FindSlug(filter bson.M) (bson.M, context.CancelFunc, error) {
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	// Find filter in db
+	cur, _ := db.Find(ctx, filter)
+
+	// Item could not be found
+	if cur.RemainingBatchLength() <= 0 {
+		return nil, cancel, errors.New("no items found")
+	}
+
+	var item bson.M
+
+	for cur.Next(ctx) {
+		var res bson.M
+		cur.Decode(&res)
+
+		if res != nil {
+			item = res
+			break
+		}
+	}
+
+	if err := cur.Err(); err != nil {
+		panic(err)
+	}
+
+	return item, cancel, nil
 }
