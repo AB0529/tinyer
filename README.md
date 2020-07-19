@@ -2,7 +2,7 @@
 
 A simple URL shortner built with Go.
 
-## Ysaje
+## Usage
 
 All responses will have the same form.
 
