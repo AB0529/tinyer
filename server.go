@@ -181,6 +181,9 @@ func CreateSlug(n int) string {
 }
 
 // FindSlug finds item in database with same slug as provided
+// Yes I know I could do 'FindOne' however when I tried with that
+// The codebase wouldn't detect the database updating and would error
+// This seems to prevent that so ¯\_(ツ)_/¯
 func FindSlug(filter bson.M) (bson.M, context.CancelFunc, error) {
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
 	// Find filter in db
