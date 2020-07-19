@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 
-	server "github.com/AB0529/tinyer/server"
 	"github.com/gorilla/mux"
 )
 
@@ -29,8 +28,8 @@ func main() {
 
 	// Routes
 	// -------------------------------
-	router.HandleFunc("/", server.Home)
-	router.HandleFunc("/ping", server.Ping)
+	router.HandleFunc("/", Home)
+	router.HandleFunc("/ping", Ping)
 	// -------------------------------
 
 	// Run server
