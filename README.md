@@ -65,7 +65,7 @@ Responses definations will only show the value of the `result field`*.
 **Arguments**
 
 - `"slug":string` a unique identifier for the url. If not provided, a unique one will be generated instead
-- `"name":string` a firndly name for the url
+- `"name":string` a friendly name for the url
 
 **Response**
 - `200 OK` on success
