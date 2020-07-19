@@ -29,6 +29,9 @@ type Tinyer struct {
 	CreatedAt string `json:"created-at"`
 }
 
+// TODO: Duplicate code used on all 3 methods
+// Condense into function later
+
 // Home serves the home html file
 func Home(w http.ResponseWriter, r *http.Request) {
 	// TODO: Create better home page redirects for now
