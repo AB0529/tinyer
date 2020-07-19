@@ -8,7 +8,7 @@ All responses will have the same form.
 
 ```json
 {
-    "status": "Intiger holding the status code of the response",
+    "status": "Integer holding the status code of the response",
     "state": "String that will either be `ok` or `fail`",
     "result": "Mixed type holding the content of the response",
 }
