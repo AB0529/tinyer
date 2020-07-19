@@ -37,14 +37,14 @@ func Home(w http.ResponseWriter, r *http.Request) {
 
 // GetURL will return info about the URL
 func GetURL(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := s.Make(mux.Vars(r)["id"])
 
 	// Search Mongo with identifier
 	var res Tinyer
 	db.FindOne(ctx, bson.M{"slug": id}).Decode(&res)
 
 	if res == (Tinyer{}) {
-		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' does not exist", id)})
+		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' could not be found", id)})
 	}
 }
 
@@ -103,7 +103,7 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 	timestamp := time.Now().String()
 
 	// Create url in database
-	res, err := db.InsertOne(ctx, bson.M{
+	_, err = db.InsertOne(ctx, bson.M{
 		"slug":       slug,
 		"name":       bod.Name,
 		"created-at": timestamp,
@@ -118,15 +118,51 @@ func CreateURL(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
+	SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: Tinyer{Slug: slug, Name: bod.Name, CreatedAt: timestamp}})
 }
 
 // DeleteURL will delete a url
 func DeleteURL(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["delid"]
+	id := s.Make(mux.Vars(r)["id"])
 
-	fmt.Println(r.Method)
-	fmt.Println(id)
+	// Check if url exists
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cur, err := db.Find(ctx, bson.M{"slug": id})
+	if err != nil {
+		fmt.Println("error (78): " + err.Error())
+	}
+	defer cur.Close(ctx)
+
+	// Could not find
+	if cur.RemainingBatchLength() <= 0 {
+		SendJSON(w, Response{Status: http.StatusNotFound, State: "fail", Result: fmt.Sprintf("error: url with identifier '%s' could not be found", id)})
+		return
+	}
+
+	for cur.Next(ctx) {
+		var res bson.M
+		err := cur.Decode(&res)
+
+		if err != nil {
+			fmt.Println("error (86): " + err.Error())
+		}
+
+		if res["slug"] == id {
+			// Delete if exists
+			db.DeleteOne(ctx, bson.M{"slug": id})
+			SendJSON(w, Response{Status: http.StatusOK, State: "ok", Result: res})
+			return
+		}
+
+	}
+	if err := cur.Err(); err != nil {
+		panic(err)
+	}
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 // SendJSON util func to handle sending JSON response
